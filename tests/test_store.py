@@ -102,3 +102,109 @@ def test_issue_then_return_restores_summary(store):
     store.issue_book(1, 4)
     store.return_book(1)
     assert store.summary() == before
+
+
+# --- Search and filtering (issue #1) ---
+
+
+def titles(books):
+    return {b.title for b in books}
+
+
+def test_list_books_without_filters_returns_all(store):
+    assert len(store.list_books()) == 12
+
+
+def test_search_matches_title_case_insensitively(store):
+    assert titles(store.list_books(q="maple")) == {"The Maple Orchard"}
+    assert titles(store.list_books(q="MAPLE ORCHARD")) == {"The Maple Orchard"}
+
+
+def test_search_matches_author(store):
+    assert titles(store.list_books(q="greta foss")) == {
+        "Pip and the Paper Boat",
+        "The Lantern Fox",
+    }
+
+
+def test_search_matches_partial_text_in_title_or_author(store):
+    # "ell" is in the author "Rowan Ellis" only; "ter" is in several titles.
+    assert titles(store.list_books(q="ell")) == {"The Maple Orchard"}
+    assert len(store.list_books(q="ter")) >= 2
+
+
+def test_search_ignores_surrounding_whitespace_and_blank_means_all(store):
+    assert titles(store.list_books(q="  maple  ")) == {"The Maple Orchard"}
+    assert len(store.list_books(q="   ")) == 12
+
+
+def test_search_with_no_match_returns_empty(store):
+    assert store.list_books(q="zzz-no-such-book") == []
+
+
+def test_filter_by_category(store):
+    books = store.list_books(category="Science")
+    assert len(books) == 3
+    assert {b.category for b in books} == {"Science"}
+
+
+def test_filter_by_category_is_case_insensitive(store):
+    assert len(store.list_books(category="science")) == 3
+
+
+def test_filter_by_unknown_category_returns_empty(store):
+    assert store.list_books(category="Poetry") == []
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [(BookStatus.AVAILABLE, 6), (BookStatus.ISSUED, 4), (BookStatus.RESERVED, 2)],
+)
+def test_filter_by_status(store, status, expected):
+    books = store.list_books(status=status)
+    assert len(books) == expected
+    assert {b.status for b in books} == {status}
+
+
+def test_combined_search_category_and_status(store):
+    assert titles(store.list_books(q="greta", category="Children", status=BookStatus.RESERVED)) == {
+        "The Lantern Fox"
+    }
+    assert titles(store.list_books(category="Science", status=BookStatus.AVAILABLE)) == {
+        "Understanding Tides"
+    }
+    assert titles(store.list_books(q="maya", status=BookStatus.AVAILABLE)) == {
+        "Sourdough Seasons",
+        "One-Pot Winters",
+    }
+
+
+def test_combined_filters_with_no_overlap_return_empty(store):
+    assert store.list_books(q="maple", category="Science") == []
+    assert store.list_books(q="greta", status=BookStatus.ISSUED) == []
+
+
+def test_filtered_results_still_include_borrower_names(store):
+    (book,) = store.list_books(q="birchwood")
+    assert book.status == BookStatus.ISSUED
+    assert book.borrower_name == "Alice Hartwell"
+
+
+def test_filter_reflects_status_change_after_issue_and_return(store):
+    assert titles(store.list_books(q="maple", status=BookStatus.AVAILABLE)) == {"The Maple Orchard"}
+    store.issue_book(1, 4)
+    assert store.list_books(q="maple", status=BookStatus.AVAILABLE) == []
+    assert titles(store.list_books(q="maple", status=BookStatus.ISSUED)) == {"The Maple Orchard"}
+    store.return_book(1)
+    assert titles(store.list_books(q="maple", status=BookStatus.AVAILABLE)) == {"The Maple Orchard"}
+
+
+def test_list_categories_is_sorted_and_unique(store):
+    assert store.list_categories() == [
+        "Children",
+        "Cooking",
+        "Fiction",
+        "History",
+        "Nature",
+        "Science",
+    ]

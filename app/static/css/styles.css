@@ -105,15 +105,61 @@ h2 {
   font-weight: 600;
 }
 
-/* Reserved space for the future search and filter bar */
-.filter-placeholder {
-  min-height: 3rem;
+/* Search and filter bar (issue #1) */
+.filter-bar {
   margin-bottom: 0.75rem;
   padding: 0.75rem 1rem;
-  border: 2px dashed var(--border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 6px;
+}
+
+.filter-bar form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+
+.filter-field-wide {
+  flex: 1 1 240px;
+}
+
+.filter-field label {
+  font-size: 0.85rem;
   color: var(--muted);
+}
+
+.filter-field input,
+.filter-field select {
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.filter-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+a.btn {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.empty-row td {
+  padding: 1.5rem;
   text-align: center;
+  color: var(--muted);
+  font-style: italic;
 }
 
 /* Books table */

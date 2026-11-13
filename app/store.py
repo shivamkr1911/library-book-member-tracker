@@ -64,8 +64,33 @@ class LibraryStore:
             borrower_name=borrower.name if borrower else None,
         )
 
-    def list_books(self) -> List[BookView]:
-        return [self.to_view(b) for b in self._books.values()]
+    def list_books(
+        self,
+        q: Optional[str] = None,
+        category: Optional[str] = None,
+        status: Optional[BookStatus] = None,
+    ) -> List[BookView]:
+        """List books. Filters are optional and combine with AND.
+
+        `q` is a case-insensitive substring match on title or author.
+        `category` is a case-insensitive exact match.
+        """
+        needle = q.strip().casefold() if q else ""
+        wanted_category = category.strip().casefold() if category else ""
+        books = []
+        for book in self._books.values():
+            if needle and needle not in book.title.casefold():
+                if needle not in book.author.casefold():
+                    continue
+            if wanted_category and book.category.casefold() != wanted_category:
+                continue
+            if status is not None and book.status != status:
+                continue
+            books.append(self.to_view(book))
+        return books
+
+    def list_categories(self) -> List[str]:
+        return sorted({b.category for b in self._books.values()})
 
     def get_book_view(self, book_id: int) -> BookView:
         return self.to_view(self.get_book(book_id))

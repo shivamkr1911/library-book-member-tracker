@@ -1,8 +1,15 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
-from app.models import BookView, DashboardSummary, IssueRequest, Member, MemberStatus
+from app.models import (
+    BookStatus,
+    BookView,
+    DashboardSummary,
+    IssueRequest,
+    Member,
+    MemberStatus,
+)
 from app.store import (
     BookNotAvailableError,
     BookNotFoundError,
@@ -25,8 +32,18 @@ def dashboard(store: LibraryStore = Depends(get_store)) -> DashboardSummary:
 
 
 @router.get("/books", response_model=List[BookView])
-def list_books(store: LibraryStore = Depends(get_store)) -> List[BookView]:
-    return store.list_books()
+def list_books(
+    q: Optional[str] = Query(default=None, max_length=100),
+    category: Optional[str] = Query(default=None, max_length=50),
+    status: Optional[BookStatus] = None,
+    store: LibraryStore = Depends(get_store),
+) -> List[BookView]:
+    return store.list_books(q=q, category=category, status=status)
+
+
+@router.get("/categories", response_model=List[str])
+def list_categories(store: LibraryStore = Depends(get_store)) -> List[str]:
+    return store.list_categories()
 
 
 @router.get("/members", response_model=List[Member])

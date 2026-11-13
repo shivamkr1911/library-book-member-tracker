@@ -28,10 +28,36 @@
 <section aria-labelledby="books-heading">
   <h2 id="books-heading">Books</h2>
 
-  <!-- FUTURE FEATURE: search and filter bar goes here, directly above the books table.
-       Intentionally empty: no behaviour or backend support yet. -->
-  <div id="book-filter-bar" class="filter-placeholder">
-    Search and filter coming soon
+  <!-- SEARCH AND FILTER BAR (issue #1): the reserved area directly above the books table. -->
+  <div id="book-filter-bar" class="filter-bar">
+    <form id="filter-form" method="get" action="/" role="search" aria-label="Search and filter books">
+      <div class="filter-field filter-field-wide">
+        <label for="filter-q">Search title or author</label>
+        <input type="search" id="filter-q" name="q" value="{{ filters.q }}" maxlength="100">
+      </div>
+      <div class="filter-field">
+        <label for="filter-category">Category</label>
+        <select id="filter-category" name="category">
+          <option value="">All categories</option>
+          {% for cat in categories %}
+          <option value="{{ cat }}"{% if cat|lower == filters.category|lower %} selected{% endif %}>{{ cat }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="filter-status">Status</label>
+        <select id="filter-status" name="status">
+          <option value="">All statuses</option>
+          {% for s in statuses %}
+          <option value="{{ s }}"{% if s == filters.status %} selected{% endif %}>{{ s|capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn">Apply</button>
+        <a href="/" id="clear-filters" class="btn btn-secondary">Clear filters</a>
+      </div>
+    </form>
   </div>
 
   <div class="table-wrap">
@@ -61,6 +87,10 @@
             <button type="button" class="btn btn-secondary" data-action="return" data-book-id="{{ book.id }}" data-book-title="{{ book.title }}">Return</button>
             {% endif %}
           </td>
+        </tr>
+        {% else %}
+        <tr class="empty-row" id="books-empty">
+          <td colspan="6">No books match your search or filters.</td>
         </tr>
         {% endfor %}
       </tbody>
