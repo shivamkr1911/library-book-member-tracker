@@ -3,7 +3,7 @@
 Internal app for Maple Grove Community Library (fictional). See [docs/requirements.md](docs/requirements.md).
 
 Status: backend (in-memory store + JSON API) and dashboard UI (Jinja2, vanilla JS, CSS) are built.
-The dashboard is served at http://127.0.0.1:8000/. The search and filter bar is a marked placeholder.
+The dashboard is served at http://127.0.0.1:8000/. It includes a search and filter bar (title or author, category, status) above the books table.
 
 ## Setup
 

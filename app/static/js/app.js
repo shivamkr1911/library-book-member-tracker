@@ -71,6 +71,15 @@
 
   function renderTable(books) {
     booksBody.replaceChildren();
+    if (books.length === 0) {
+      const row = el("tr", "empty-row");
+      row.id = "books-empty";
+      const cell = el("td", "", "No books match your search or filters.");
+      cell.colSpan = 6;
+      row.append(cell);
+      booksBody.append(row);
+      return;
+    }
     books.forEach((book) => {
       const row = el("tr");
       row.dataset.bookId = book.id;
@@ -127,11 +136,30 @@
     });
   }
 
+  // The applied filters live in the page URL (the filter form is a plain GET form).
+  // Only non-empty, known parameters are forwarded to the API.
+  function currentFilterQuery() {
+    const current = new URLSearchParams(window.location.search);
+    const query = new URLSearchParams();
+    ["q", "category", "status"].forEach((key) => {
+      const value = (current.get(key) || "").trim();
+      if (value) query.set(key, value);
+    });
+    const text = query.toString();
+    return text ? `?${text}` : "";
+  }
+
   async function refresh() {
-    const [summary, books] = await Promise.all([api("/api/dashboard"), api("/api/books")]);
+    // The table honours the applied filters; the summary cards and status grid
+    // always describe the whole library.
+    const [summary, allBooks, tableBooks] = await Promise.all([
+      api("/api/dashboard"),
+      api("/api/books"),
+      api(`/api/books${currentFilterQuery()}`),
+    ]);
     renderSummary(summary);
-    renderTable(books);
-    renderGrid(books);
+    renderTable(tableBooks);
+    renderGrid(allBooks);
   }
 
   async function refreshQuietly() {

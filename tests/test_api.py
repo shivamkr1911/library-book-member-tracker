@@ -107,3 +107,90 @@ def test_issue_return_round_trip_restores_counts(client):
     assert client.post("/api/books/1/issue", json={"member_id": 4}).status_code == 200
     assert client.post("/api/books/1/return").status_code == 200
     assert client.get("/api/dashboard").json() == before
+
+
+# --- Search and filtering (issue #1) ---
+
+
+def book_titles(response):
+    return {b["title"] for b in response.json()}
+
+
+def test_books_search_by_title(client):
+    response = client.get("/api/books", params={"q": "sourdough"})
+    assert response.status_code == 200
+    assert book_titles(response) == {"Sourdough Seasons"}
+
+
+def test_books_search_by_author(client):
+    response = client.get("/api/books", params={"q": "maya brandt"})
+    assert book_titles(response) == {"Sourdough Seasons", "One-Pot Winters"}
+
+
+def test_books_search_is_case_insensitive(client):
+    assert book_titles(client.get("/api/books", params={"q": "TIDES"})) == {"Understanding Tides"}
+
+
+def test_books_filter_by_category(client):
+    response = client.get("/api/books", params={"category": "History"})
+    assert response.status_code == 200
+    assert {b["category"] for b in response.json()} == {"History"}
+    assert len(response.json()) == 2
+
+
+def test_books_filter_by_each_status(client):
+    for status, expected in (("available", 6), ("issued", 4), ("reserved", 2)):
+        response = client.get("/api/books", params={"status": status})
+        assert response.status_code == 200
+        assert len(response.json()) == expected
+        assert {b["status"] for b in response.json()} == {status}
+
+
+def test_books_combined_filters(client):
+    response = client.get(
+        "/api/books", params={"q": "greta", "category": "Children", "status": "reserved"}
+    )
+    assert book_titles(response) == {"The Lantern Fox"}
+    response = client.get("/api/books", params={"category": "Science", "status": "issued"})
+    assert book_titles(response) == {"Backyard Astronomy"}
+
+
+def test_books_clearing_filters_restores_full_list(client):
+    assert len(client.get("/api/books", params={"q": "maple"}).json()) == 1
+    # "Clear filters" means: no parameters, or empty parameters from the form.
+    assert len(client.get("/api/books").json()) == 12
+    assert len(client.get("/api/books", params={"q": "", "category": ""}).json()) == 12
+
+
+def test_books_no_match_returns_empty_list(client):
+    response = client.get("/api/books", params={"q": "zzz-no-such-book"})
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_books_invalid_status_is_rejected(client):
+    assert client.get("/api/books", params={"status": "bogus"}).status_code == 422
+
+
+def test_books_overlong_search_is_rejected(client):
+    assert client.get("/api/books", params={"q": "x" * 101}).status_code == 422
+
+
+def test_categories_endpoint(client):
+    response = client.get("/api/categories")
+    assert response.status_code == 200
+    assert response.json() == ["Children", "Cooking", "Fiction", "History", "Nature", "Science"]
+
+
+def test_issue_and_return_work_while_filtering(client):
+    params = {"q": "maple", "status": "available"}
+    assert book_titles(client.get("/api/books", params=params)) == {"The Maple Orchard"}
+
+    assert client.post("/api/books/1/issue", json={"member_id": 4}).status_code == 200
+    assert client.get("/api/books", params=params).json() == []
+    issued = client.get("/api/books", params={"q": "maple", "status": "issued"}).json()
+    assert [b["borrower_name"] for b in issued] == ["Dmitri Varga"]
+
+    assert client.post("/api/books/1/return").status_code == 200
+    assert book_titles(client.get("/api/books", params=params)) == {"The Maple Orchard"}
+    assert client.get("/api/dashboard").json()["issued_books"] == 4
