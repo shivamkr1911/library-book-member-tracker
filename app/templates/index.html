@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="message" class="message" role="status" aria-live="polite" hidden></div>
+
+<section aria-labelledby="summary-heading">
+  <h2 id="summary-heading" class="visually-hidden">Summary</h2>
+  <div class="cards" id="summary-cards">
+    <div class="card">
+      <span class="card-label">Total Books</span>
+      <span class="card-value" data-summary="total_books">{{ summary.total_books }}</span>
+    </div>
+    <div class="card">
+      <span class="card-label">Available Books</span>
+      <span class="card-value" data-summary="available_books">{{ summary.available_books }}</span>
+    </div>
+    <div class="card">
+      <span class="card-label">Issued Books</span>
+      <span class="card-value" data-summary="issued_books">{{ summary.issued_books }}</span>
+    </div>
+    <div class="card">
+      <span class="card-label">Active Members</span>
+      <span class="card-value" data-summary="active_members">{{ summary.active_members }}</span>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="books-heading">
+  <h2 id="books-heading">Books</h2>
+
+  <!-- FUTURE FEATURE: search and filter bar goes here, directly above the books table.
+       Intentionally empty: no behaviour or backend support yet. -->
+  <div id="book-filter-bar" class="filter-placeholder">
+    Search and filter coming soon
+  </div>
+
+  <div class="table-wrap">
+    <table id="books-table">
+      <thead>
+        <tr>
+          <th scope="col">Title</th>
+          <th scope="col">Author</th>
+          <th scope="col">Category</th>
+          <th scope="col">Status</th>
+          <th scope="col">Current Borrower</th>
+          <th scope="col">Action</th>
+        </tr>
+      </thead>
+      <tbody id="books-body">
+        {% for book in books %}
+        <tr data-book-id="{{ book.id }}">
+          <td>{{ book.title }}</td>
+          <td>{{ book.author }}</td>
+          <td>{{ book.category }}</td>
+          <td><span class="badge badge-{{ book.status.value }}">{{ book.status.value|capitalize }}</span></td>
+          <td>{{ book.borrower_name or "—" }}</td>
+          <td>
+            {% if book.status.value == "available" %}
+            <button type="button" class="btn" data-action="issue" data-book-id="{{ book.id }}" data-book-title="{{ book.title }}">Issue</button>
+            {% elif book.status.value == "issued" %}
+            <button type="button" class="btn btn-secondary" data-action="return" data-book-id="{{ book.id }}" data-book-title="{{ book.title }}">Return</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section aria-labelledby="grid-heading">
+  <h2 id="grid-heading">Book Status Grid</h2>
+  <div class="status-grid" id="status-grid">
+    {% for status, items in columns %}
+    <div class="grid-column" data-status="{{ status.value }}">
+      <h3>{{ status.value|capitalize }} <span class="count">({{ items|length }})</span></h3>
+      <div class="grid-items">
+        {% for book in items %}
+        <div class="book-card">
+          <strong>{{ book.title }}</strong>
+          <span>{{ book.author }}</span>
+          {% if book.borrower_name %}<span class="borrower">Borrower: {{ book.borrower_name }}</span>{% endif %}
+        </div>
+        {% else %}
+        <p class="empty">No books</p>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<dialog id="issue-dialog" aria-labelledby="issue-dialog-title">
+  <form id="issue-form" method="dialog">
+    <h2 id="issue-dialog-title">Issue book</h2>
+    <p id="issue-dialog-book"></p>
+    <label for="issue-member">Member</label>
+    <select id="issue-member" required></select>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-secondary" id="issue-cancel">Cancel</button>
+      <button type="submit" class="btn" id="issue-confirm">Confirm</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
